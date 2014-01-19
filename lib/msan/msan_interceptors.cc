@@ -483,6 +483,33 @@ INTERCEPTOR(int, snprintf, char *str, uptr size, const char *format, ...) {
   return res;
 }
 
+INTERCEPTOR(int, vsnprintf_l, char *str, size_t size, locale_t loc, const char *format, va_list ap) {
+  ENSURE_MSAN_INITED();
+  int res = REAL(vsnprintf_l)(str, size, loc, format, ap);
+  if (res >= 0 && !__msan_has_dynamic_component()) {
+    __msan_unpoison(str, res + 1);
+  }
+  return res;
+}
+
+INTERCEPTOR(int, snprintf_l, char *str, size_t size, locale_t loc, const char *format, ...) {
+  ENSURE_MSAN_INITED();
+  va_list ap;
+  va_start(ap, format);
+  int res = vsnprintf_l(str, size, loc, format, ap);
+  va_end(ap);
+  return res;
+}
+
+INTERCEPTOR(int, __snprintf_l, char *str, size_t size, locale_t loc, const char *format, ...) {
+  ENSURE_MSAN_INITED();
+  va_list ap;
+  va_start(ap, format);
+  int res = vsnprintf_l(str, size, loc, format, ap);
+  va_end(ap);
+  return res;
+}
+
 INTERCEPTOR(int, swprintf, void *str, uptr size, void *format, ...) {
   ENSURE_MSAN_INITED();
   va_list ap;
